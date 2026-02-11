@@ -1,0 +1,60 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+
+st.title("🎓 Student Pass/Fail Prediction App")
+
+# Upload Dataset
+uploaded_file = st.file_uploader("Upload your student dataset (CSV)", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+
+    st.subheader("Dataset Preview")
+    st.write(df.head())
+
+    # Assume target column name is 'Result'
+    if "Result" not in df.columns:
+        st.error("Dataset must contain a 'Result' column (Pass/Fail)")
+    else:
+        # Encode target
+        le = LabelEncoder()
+        df["Result"] = le.fit_transform(df["Result"])  # Pass=1, Fail=0
+
+        X = df.drop("Result", axis=1)
+        y = df["Result"]
+
+        # Handle categorical features
+        X = pd.get_dummies(X)
+
+        # Train model
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+
+        model = LogisticRegression(max_iter=1000)
+        model.fit(X_train, y_train)
+
+        st.success("Model Trained Successfully!")
+
+        st.subheader("Enter Student Details")
+
+        input_data = {}
+        for col in X.columns:
+            input_data[col] = st.number_input(f"{col}", value=0.0)
+
+        if st.button("Predict"):
+            input_df = pd.DataFrame([input_data])
+            prediction = model.predict(input_df)[0]
+            probability = model.predict_proba(input_df)[0][1]
+
+            if prediction == 1:
+                st.success(f"Prediction: PASS ✅")
+            else:
+                st.error(f"Prediction: FAIL ❌")
+
+            st.write(f"Confidence: {probability:.2f}")
